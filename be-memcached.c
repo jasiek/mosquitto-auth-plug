@@ -139,7 +139,7 @@ void be_memcached_destroy(void *handle)
     }
 }
 
-char *be_memcached_getuser(void *handle, const char *username, const char *password, int *authenticated)
+int be_memcached_getuser(void *handle, const char *username, const char *_, char **phash)
 {
     struct memcached_backend *conf = (struct memcached_backend *)handle;
 
@@ -147,24 +147,23 @@ char *be_memcached_getuser(void *handle, const char *username, const char *passw
     size_t value_length;
     uint32_t flags;
     char *value = NULL;
-    char *pwhash = NULL;
 
     if (conf == NULL || conf->memcached == NULL || username == NULL)
-        return (NULL);
+      return BACKEND_ERROR;
 
     value = memcached_get(conf->memcached, username, strlen(username), &value_length, &flags, &rc);
 
     if (value == NULL || rc != MEMCACHED_SUCCESS) {
         be_memcached_reconnect(conf);
-        return (NULL);
+        return BACKEND_ERROR;
     }
 
     if (rc == MEMCACHED_SUCCESS) {
-        pwhash = strdup(value);
+        *phash = strdup(value);
     }
 
     free(value);
-    return (pwhash);
+    return BACKEND_DEFER;
 }
 
 int be_memcached_superuser(void *conf, const char *username)
